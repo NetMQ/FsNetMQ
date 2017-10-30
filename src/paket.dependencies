@@ -3,4 +3,5 @@ source https://nuget.org/api/v2
 nuget FSharp.Core
 nuget NetMQ
 nuget xunit
+nuget xunit.runner.console
 nuget FsUnit.xUnit

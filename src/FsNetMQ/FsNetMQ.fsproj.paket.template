@@ -1,0 +1,11 @@
+type project
+id FsNetMQ
+licenseUrl https://github.com/NetMQ/FsNetMQ/blob/master/LICENSE
+authors Doron Somech
+projectUrl https://github.com/NetMQ/FsNetMQ
+tags NetMQ ZeroMQ zmq
+description
+    FSharp binding for NetMQ
+    
+
+
