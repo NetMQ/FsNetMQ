@@ -54,7 +54,7 @@ module Timer =
     let isEnabled (Timer t) = t.Enable
     let reset (Timer t) = t.EnableAndReset ()
             
-module Actor = 
+module Actor =    
     type T = 
         | Actor of NetMQActor
         interface IDisposable with 
@@ -70,7 +70,7 @@ module Actor =
              
     let asSocket (Actor actor) = 
         let socketPollable = actor :> ISocketPollable    
-        Socket.Socket socketPollable.Socket     
+        Socket.Socket socketPollable.Socket                           
         
 module Poller = 
     type T = 
@@ -98,7 +98,7 @@ module Poller =
          
     let removeSocket (Poller poller) (Socket.Socket socket) = poller.Remove socket
     let removeActor (Poller poller) (Actor.Actor actor) = poller.Remove actor
-    let removeTimer (Poller poller) (Timer.Timer timer) = poller.Remove timer
+    let removeTimer (Poller poller) (Timer.Timer timer) = poller.Remove timer 
 
 module Frame =     
     let sendMore (Socket.Socket socket) (bytes:byte[]) = socket.SendMoreFrame (bytes) |> ignore                
@@ -207,7 +207,7 @@ module Stream =
         let buffer, more = Frame.recv socket
         Stream (buffer, 0), more
         
-    let send (Stream (buffer, offset)) socket =
+    let send socket (Stream (buffer, offset)) =
         let frame = 
             if Array.length buffer = offset then
                 buffer
