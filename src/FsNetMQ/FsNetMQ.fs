@@ -61,6 +61,8 @@ module Actor =
             member x.Dispose () = 
                 match x with 
                 | Actor actor -> actor.Dispose ()
+
+    let endMessage = NetMQActor.EndShimMessage             
                  
     let create shim = 
         let handler (pipe:Sockets.PairSocket) = shim (Socket.Socket pipe)
@@ -70,35 +72,7 @@ module Actor =
              
     let asSocket (Actor actor) = 
         let socketPollable = actor :> ISocketPollable    
-        Socket.Socket socketPollable.Socket                           
-        
-module Poller = 
-    type T = 
-        | Poller of NetMQPoller 
-        interface IDisposable with
-          member x.Dispose() = 
-             match x with
-             | Poller p -> p.Dispose()
-             
-    let create () = Poller (new NetMQ.NetMQPoller())
-    let run (Poller poller) = poller.Run ()
-    let stop (Poller poller) = poller.Stop () 
-    
-    let addSocket (Poller poller) (Socket.Socket socket) = 
-        poller.Add socket        
-        Observable.map (fun _ -> socket) socket.ReceiveReady
-        
-    let addActor (Poller poller) (Actor.Actor actor) =
-         poller.Add actor        
-         Observable.map (fun _ -> actor) actor.ReceiveReady                  
-    
-    let addTimer (Poller poller) (Timer.Timer timer)=
-        poller.Add timer
-        Observable.map (fun _ -> timer) timer.Elapsed
-         
-    let removeSocket (Poller poller) (Socket.Socket socket) = poller.Remove socket
-    let removeActor (Poller poller) (Actor.Actor actor) = poller.Remove actor
-    let removeTimer (Poller poller) (Timer.Timer timer) = poller.Remove timer 
+        Socket.Socket socketPollable.Socket                                   
 
 module Frame =     
     let sendMore (Socket.Socket socket) (bytes:byte[]) = socket.SendMoreFrame (bytes) |> ignore                
@@ -195,6 +169,49 @@ module Multipart =
     let trySendNow socket parts = trySend socket parts 0<milliseconds>    
     
     let skip (Socket.Socket socket) = socket.SkipMultipartMessage ()                     
+           
+module Poller = 
+    type T = 
+        | Poller of NetMQPoller 
+        interface IDisposable with
+          member x.Dispose() = 
+             match x with
+             | Poller p -> p.Dispose()
+             
+    let create () = Poller (new NetMQ.NetMQPoller())
+    let run (Poller poller) = poller.Run ()
+    let stop (Poller poller) = poller.Stop () 
+    
+    let addSocket (Poller poller) (Socket.Socket socket) = 
+        poller.Add socket        
+        Observable.map (fun _ -> socket) socket.ReceiveReady
+        
+    let addActor (Poller poller) (Actor.Actor actor) =
+         poller.Add actor        
+         Observable.map (fun _ -> actor) actor.ReceiveReady                  
+    
+    let addTimer (Poller poller) (Timer.Timer timer)=
+        poller.Add timer
+        Observable.map (fun _ -> timer) timer.Elapsed
+         
+    let removeSocket (Poller poller) (Socket.Socket socket) = poller.Remove socket
+    let removeActor (Poller poller) (Actor.Actor actor) = poller.Remove actor
+    let removeTimer (Poller poller) (Timer.Timer timer) = poller.Remove timer 
+    
+    let registerEndMessage poller shim = 
+        let handler _ = 
+            let msg = SingleFrame.recv shim
+            let msg' = System.Text.Encoding.UTF8.GetString (msg)
+            
+            if msg' = NetMQActor.EndShimMessage then                    
+              removeSocket poller shim
+              stop poller
+        
+        let observer = 
+            addSocket poller shim 
+            |> Observable.subscribe handler
+                    
+        observer
            
 module Stream =    
     type T = Stream of (byte[] * int)                                                            
