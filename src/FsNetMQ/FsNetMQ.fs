@@ -26,6 +26,7 @@ module Socket =
     let pull () = Socket (new Sockets.PullSocket())
     let pair () = Socket (new Sockets.PairSocket())
     let stream () = Socket (new Sockets.StreamSocket())
+    let peer () = Socket (new Sockets.PeerSocket())
     
     let connect (Socket socket) address = socket.Connect address
     let bind (Socket socket) address = socket.Bind address
@@ -44,6 +45,53 @@ module Socket =
         | :? Sockets.XSubscriberSocket as xsub -> xsub.Unsubscribe subscription
         | _ -> invalidArg "socket" "Socket is not a sub or xsub socket"
 
+module Peer =     
+    let connect (Socket.Socket socket) address = 
+        socket.Connect address
+        socket.Options.LastPeerRoutingId
+        
+module RoutingId =    
+    type T = 
+        | RoutingId of byte[]           
+        
+    module TryResult =         
+        type T =
+            | Ok
+            | HostUnreachable
+            | TimedOut
+        
+    module Result =             
+        type T = 
+            | Ok
+            | HostUnreachable        
+
+    let get (Socket.Socket socket) =         
+        let bytes = socket.ReceiveFrameBytes ()
+        RoutingId bytes
+                         
+    let tryGet (Socket.Socket socket) (timeout:int<milliseconds>) =
+            
+        let success, bytes = socket.TryReceiveFrameBytes (TimeSpan.FromMilliseconds (float timeout))
+                
+        match success with 
+        | true -> Some (RoutingId bytes)
+        | false -> None      
+            
+    let set (Socket.Socket socket) (RoutingId routingId) =
+        try 
+            socket.SendMoreFrame routingId |> ignore
+            Result.Ok
+        with 
+        | :? HostUnreachableException -> Result.HostUnreachable
+                
+    let trySet (Socket.Socket socket) (RoutingId routingId) (timeout:int<milliseconds>) =
+        try
+            match socket.TrySendFrame (TimeSpan.FromMilliseconds (float timeout), routingId, true) with 
+            | true -> TryResult.Ok
+            | false -> TryResult.TimedOut
+        with 
+            | :? HostUnreachableException -> TryResult.HostUnreachable                
+                                                                          
 module Options =            
     let sendHighWatermark (Socket.Socket socket) = socket.Options.SendHighWatermark        
          
