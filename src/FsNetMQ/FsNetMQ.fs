@@ -44,11 +44,6 @@ module Socket =
         | :? Sockets.SubscriberSocket as sub -> sub.Unsubscribe subscription
         | :? Sockets.XSubscriberSocket as xsub -> xsub.Unsubscribe subscription
         | _ -> invalidArg "socket" "Socket is not a sub or xsub socket"
-
-module Peer =     
-    let connect (Socket.Socket socket) address = 
-        socket.Connect address
-        socket.Options.LastPeerRoutingId
         
 module RoutingId =    
     type T = 
@@ -91,7 +86,21 @@ module RoutingId =
             | false -> TryResult.TimedOut
         with 
             | :? HostUnreachableException -> TryResult.HostUnreachable                
-                                                                          
+          
+
+module Peer =     
+    let connect (Socket.Socket socket) address = 
+        socket.Connect address
+        RoutingId.RoutingId socket.Options.LastPeerRoutingId
+        
+module Pair = 
+    let createPairs () = 
+        let mutable p1 = null
+        let mutable p2 = null
+        
+        Sockets.PairSocket.CreateSocketPair (ref p1, ref p2)        
+        Socket.Socket p1, Socket.Socket p2
+                                               
 module Options =            
     let sendHighWatermark (Socket.Socket socket) = socket.Options.SendHighWatermark        
          
