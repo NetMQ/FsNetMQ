@@ -298,6 +298,11 @@ module Stream =
         let buffer, more = Frame.recv socket
         Stream (buffer, 0), more
         
+    let tryRecv socket timeout =
+        match Frame.tryRecv socket timeout with
+        | Some (buffer, more) -> Some (Stream(buffer,0), more)
+        | None -> None
+        
     let send socket (Stream (buffer, offset)) =
         let frame = 
             if Array.length buffer = offset then
