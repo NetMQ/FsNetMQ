@@ -16,7 +16,7 @@ let frame,more = Frame.recv router
 
 ### Poller
 
-Poller is using IObservable, so when ever you add a socket to the poller you get an observable which you can subscribe to notify of new messages.
+Poller is using IObservable, so when ever you add a socket to the poller you get an observable which you can subscribe to be notified of new messages.
 
 ```fsharp
 use poller = Poller.create ()
