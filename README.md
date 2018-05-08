@@ -42,21 +42,24 @@ Poller.run poller
 
 ### Actor
 
-Actor is a thread with socket attached to it, so you are able to send it messages and request cancellation. Together with Poller it is a powerful concept
+Actor is a thread with socket attached to it, so you are able to send it messages and request cancellation. Together with Poller it is a powerful concept.
 
 ```fsharp
-Actor.create (fun shim -> 
-  use poller = Poller.create ()
+// Actor is disposable, so whenever you call dispose on the actor the end message will be sent the thread will exit
+let actor = 
+  Actor.create (fun shim -> 
+    use poller = Poller.create ()
     
-  // Registering for the end message which will cancel the actor
-  use emObserver = Poller.registerEndMessage poller shim
+    // Registering for the end message which will cancel the actor
+    use emObserver = Poller.registerEndMessage poller shim
 
-  // Creating sockets and adding them to the poller
-  ...
+    // Creating sockets and adding them to the poller
+    ...
    
-  // Signalling that the actor is ready, this will let the Actor.create function to exit
-  Actor.signal shim
+    // Signalling that the actor is ready, this will let the Actor.create function to exit
+    Actor.signal shim
 
-  Poller.run poller
+    Poller.run poller
+ 
 
 ```
