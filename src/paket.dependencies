@@ -1,7 +1,0 @@
-source https://nuget.org/api/v2
-
-nuget FSharp.Core
-nuget NetMQ 4.0.0.5-pre
-nuget xunit
-nuget xunit.runner.console
-nuget FsUnit.xUnit

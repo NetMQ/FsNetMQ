@@ -95,28 +95,25 @@ module Peer =
         
 module Pair = 
     let createPairs () = 
-        let mutable p1 = null
-        let mutable p2 = null
-        
-        Sockets.PairSocket.CreateSocketPair (ref p1, ref p2)        
+        let p1,p2 = Sockets.PairSocket.CreateSocketPair ()        
         Socket.Socket p1, Socket.Socket p2
                                                
 module Options =            
     let sendHighWatermark (Socket.Socket socket) = socket.Options.SendHighWatermark        
          
     let setSendHighWatermark (Socket.Socket socket) highWatermark = 
-        socket.Options.SendHighWatermark = highWatermark
+        socket.Options.SendHighWatermark <- highWatermark
 
     let recvHighWatermark (Socket.Socket socket) = socket.Options.ReceiveHighWatermark        
         
     let setRecvHighwatermark (Socket.Socket socket) highWatermark = 
-        socket.Options.ReceiveHighWatermark = highWatermark     
+        socket.Options.ReceiveHighWatermark <- highWatermark     
         
     let linger (Socket.Socket socket) = 
         (int socket.Options.Linger.TotalMilliseconds) * 1<milliseconds>
         
     let setLinger (Socket.Socket socket) (value:int<milliseconds>) = 
-        socket.Options.Linger = TimeSpan.FromMilliseconds (float value)                                                             
+        socket.Options.Linger <- TimeSpan.FromMilliseconds (float value)                                                             
         
 module Timer = 
     type T = 
