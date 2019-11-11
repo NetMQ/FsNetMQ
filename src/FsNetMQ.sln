@@ -5,7 +5,7 @@ VisualStudioVersion = 12.0.0.0
 MinimumVisualStudioVersion = 10.0.0.1
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsNetMQ", "FsNetMQ/FsNetMQ.fsproj", "{36267848-3DA4-44CC-BAA9-94FD73E01685}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsNetMQ.Test", "FsNetMQ.Test\FsNetMQ.Test.fsproj", "{8B0A94D8-4435-4FF5-8E6D-526413807F6E}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsNetMQ.Tests", "FsNetMQ.Tests\FsNetMQ.Tests.fsproj", "{8B0A94D8-4435-4FF5-8E6D-526413807F6E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

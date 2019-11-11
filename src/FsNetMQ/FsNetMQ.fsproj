@@ -21,7 +21,20 @@
 
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="FsNetMQ.fs" />
+    <Compile Include="Types.fs" />
+    <Compile Include="Socket.fs" />
+    <Compile Include="Async.fs" />
+    <Compile Include="Frame.fs" />
+    <Compile Include="SingleFrame.fs" />
+    <Compile Include="Poller.fs" />
+    <Compile Include="RoutingId.fs" />
+    <Compile Include="Peer.fs" />
+    <Compile Include="Pair.fs" />
+    <Compile Include="Options.fs" />
+    <Compile Include="Timer.fs" />
+    <Compile Include="Actor.fs" />
+    <Compile Include="Multipart.fs" />
+    <Compile Include="Stream.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NetMQ" Version="4.0.0.239-pre" />
