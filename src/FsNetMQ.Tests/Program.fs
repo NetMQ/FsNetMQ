@@ -1,3 +1,5 @@
+module FsNetMQ.Tests.Program
+
 open Expecto
 
 [<EntryPoint>]
