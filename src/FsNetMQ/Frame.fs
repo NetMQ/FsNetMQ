@@ -40,6 +40,11 @@ let recvAsync socket =
             | Some runtime ->
                 runtime.Add socket
                 let! _ = Async.AwaitEvent socket.Socket.ReceiveReady
+                let! token = Async.CancellationToken
+                
+                if token.IsCancellationRequested then                
+                    return raise <| new OperationCanceledException("operation cancelled", token)
+                
                 let frame = recv socket
                 return frame
     }                      
