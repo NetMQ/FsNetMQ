@@ -36,3 +36,17 @@ let unsubscribe (socket:Socket) (subscription:string) =
     | :? Sockets.SubscriberSocket as sub -> sub.Unsubscribe subscription
     | :? Sockets.XSubscriberSocket as xsub -> xsub.Unsubscribe subscription
     | _ -> invalidArg "socket" "Socket is not a sub or xsub socket"
+    
+let alt (socket:Socket) =
+    async {            
+        match Runtime.Current with
+        | None ->
+            return 
+                Async.NoRuntimeError "When using FsNetMQ async operation you must use Async.RunWithRuntime"
+                |> raise
+        | Some runtime ->
+            runtime.Add socket
+            let! _ = Async.AwaitEvent socket.Socket.ReceiveReady             
+            return ()
+    }
+    |> Alt.fromAsync

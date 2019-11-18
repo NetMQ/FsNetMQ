@@ -10,12 +10,12 @@ type internal Runtime() =
     static let current = new ThreadLocal<Runtime option ref>(fun () -> ref None)        
     
     let poller = new NetMQPoller()
-    let sockets = new System.Collections.Generic.HashSet<Socket.T>()
+    let sockets = new System.Collections.Generic.HashSet<Socket>()
     
     static member internal Current =            
         current.Value.Value
     
-    member this.Add(socket:Socket.T) =
+    member this.Add(socket:Socket) =
         if sockets.Add socket then
             poller.Add socket.Socket
             
@@ -45,7 +45,7 @@ type internal Runtime() =
         poller.Run()
         
         // Detaching and removing all sockets
-        Seq.iter (fun (socket:Socket.T) ->
+        Seq.iter (fun (socket:Socket) ->
             poller.Remove (socket.Socket)
             socket.DetachFromRuntime ()                
             ) sockets            
@@ -80,6 +80,22 @@ type Microsoft.FSharp.Control.Async with
         let runtime = new Runtime()
         runtime.Run (cont, ?cancellationToken=cancellationToken)
 
+    static member Iterate (x:'T1) (cont:'T1->Async<Choice<'T1,'T2>>) =
+        async {
+            let mutable state = x            
+            let mutable result = None
+            
+            while Option.isNone result do
+                let! x = cont state
+                match x with
+                | Choice1Of2 x->
+                    state <- x
+                | Choice2Of2 x->
+                    result <- Some x                    
+            
+            return Option.get result                    
+        }                                                
+    
     /// <summary>Creates an asynchronous computation that executes all the given asynchronous computations sequentially,
     /// starting immediately on the current operating system thread</summary>.            
     static member SequentialImmediate (computations: seq<Async<'T>>) : Async<'T []> =        
@@ -103,7 +119,7 @@ type Microsoft.FSharp.Control.Async with
     /// return the result of the first succeeding computation,
     /// starting immediately on the current operating system thread</summary>.       
     static member ChoiceImmediate(computations : Async<'T option> seq) : Async<'T option> =
-        async {
+        async {            
             let computations = Seq.toArray computations
             
             if computations.Length = 0 then
@@ -170,4 +186,3 @@ type Microsoft.FSharp.Control.Async with
            let! results = Seq.fold folder (async.Return([])) tasks
            return List.toArray results                            
         }     
-

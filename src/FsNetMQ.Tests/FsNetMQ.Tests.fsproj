@@ -27,6 +27,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AsyncTests.fs" />
+    <Compile Include="AltTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   
