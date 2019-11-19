@@ -14,12 +14,12 @@ let tests =
             use client = Socket.dealer ()
             Socket.connect client "tcp://127.0.0.1:5555"
             
-            let handleClient () = async {
+            let handleClient = async {
                 let! _ = Frame.recvAsync client
                 return Choice2Of2 ()               
             }
             
-            let handleServer () = async {
+            let handleServer = async {
                 let! _ = Frame.recvAsync server
                 printfn "Server"
                 Frame.send server "World"B
@@ -30,8 +30,8 @@ let tests =
                                    
             let cont =
                 Alt.choose [
-                    Socket.alt client ^=> handleClient
-                    Socket.alt server ^=> handleServer
+                    Socket.alt client ^=>. handleClient
+                    Socket.alt server ^=>. handleServer
                 ]
                 |> Alt.toAsync 
                         
