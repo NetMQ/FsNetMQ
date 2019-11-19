@@ -47,6 +47,6 @@ let alt (socket:Socket) =
         | Some runtime ->
             runtime.Add socket
             let! _ = Async.AwaitEvent socket.Socket.ReceiveReady             
-            return ()
+            return socket
     }
     |> Alt.fromAsync
