@@ -9,10 +9,10 @@ let tests =
     testList "Async Tests" [
         testCase "Request-Response" <| fun () ->
             use server = Socket.dealer ()
-            Socket.bind server "tcp://127.0.0.1:5555"
+            Socket.bind server "tcp://127.0.0.1:5556"
                         
             use client = Socket.dealer ()
-            Socket.connect client "tcp://127.0.0.1:5555"
+            Socket.connect client "tcp://127.0.0.1:5556"
             
             let client =
                 async {

@@ -1,6 +1,7 @@
 [<AutoOpen>]
 module FsNetMQ.Alt
 
+open FsNetMQ
 open System
 open System.Threading
 open System.Threading.Tasks
@@ -51,24 +52,33 @@ module Alt =
         }
         |> Alt
         
-    let choose (alts: Alt<'x> list) : Async<'x> =                        
+    let choose (alts: Alt<'x> list) : Alt<'x> =
+        fun ctx ->
+            async {                
+                let computations = List.map (fun (Alt alt) -> alt ctx) alts 
+                                            
+                let source = TaskCompletionSource<'x>()                            
+                let complete res =                
+                    match res with
+                    | Choice1Of2 x -> source.SetResult x
+                    | Choice2Of2 (x:exn) -> source.SetException x                                                                           
+                        
+                List.iter (fun cont ->
+                    Async.StartWithContinuations (cont,
+                                                  (fun res -> complete (Choice1Of2 res)),
+                                                  (fun exc -> complete (Choice2Of2 exc)),
+                                                  (fun _ -> ()))) computations
+                
+                return! Async.AwaitTask source.Task
+            }
+        |> Alt            
+        
+    let toAsync (Alt alt) =
         async {
             let ctx = new AltContext()
-            let computations = List.map (fun (Alt alt) -> alt ctx) alts 
-                                        
-            let source = TaskCompletionSource<'x>()                            
-            let complete res =                
-                match res with
-                | Choice1Of2 x -> source.SetResult x
-                | Choice2Of2 (x:exn) -> source.SetException x                                                                           
-                    
-            List.iter (fun cont ->
-                Async.StartWithContinuations (cont,
-                                              (fun res -> complete (Choice1Of2 res)),
-                                              (fun exc -> complete (Choice2Of2 exc)),
-                                              (fun _ -> ()))) computations
-            
-            return! Async.AwaitTask source.Task
-        } 
+            return! alt ctx
+        }                   
+        
+        
         
     

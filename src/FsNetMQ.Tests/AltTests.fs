@@ -7,7 +7,7 @@ open FsNetMQ
 [<Tests>]
 let tests =
     testList "Alt Tests" [
-        ftestCase "Recv from multiple sockets" <| fun () ->
+        testCase "Recv from multiple sockets" <| fun () ->
             use server = Socket.dealer ()
             Socket.bind server "tcp://*:5555"
             
@@ -28,12 +28,14 @@ let tests =
             
             Frame.send client "Hello"B         
                                    
-            let t = Alt.choose [
-                Socket.alt client ^=> handleClient
-                Socket.alt server ^=> handleServer
-            ]
-            
-            Async.Iterate () (fun _ -> t)
+            let cont =
+                Alt.choose [
+                    Socket.alt client ^=> handleClient
+                    Socket.alt server ^=> handleServer
+                ]
+                |> Alt.toAsync 
+                        
+            Async.Iterate () (fun _ -> cont)
             |> Async.RunWithRuntime                                               
     ]
 
