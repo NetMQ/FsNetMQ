@@ -28,7 +28,15 @@ let (^=>) (Alt alt) (f: 'x->Async<'y>) : Alt<'y> =
             return! f (x)
         }
     |> Alt
-
+    
+let (^->) (Alt alt) (f: 'x->'y) : Alt<'y> =
+    fun (ctx:AltContext) ->
+        async {
+            let! x = alt ctx
+            return f (x)
+        }
+    |> Alt
+    
 [<RequireQualifiedAccess>]
 module Alt = 
     let fromEvent e =
