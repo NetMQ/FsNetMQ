@@ -73,20 +73,42 @@ type internal Runtime() =
         task.Wait()
 
 
-exception NoRuntimeError of string        
+exception NoRuntimeError of string
+
+type Promise<'T>() =
+    let mutable result = None
+    let mutable setResult = fun result' -> result <- Some result'
+        
+    let async = Async.FromContinuations<'T> (fun (cont, econt, ccont) ->
+        match result with
+        | Some (Choice1Of3 result) -> cont result
+        | Some (Choice2Of3 ex) -> econt ex
+        | Some (Choice3Of3 ex) -> ccont ex
+        | None ->
+            setResult <- function
+                | Choice1Of3 result -> cont result
+                | Choice2Of3 ex -> econt ex
+                | Choice3Of3 ex -> ccont ex
+        )
+    
+    member __.SetResult x = setResult (Choice1Of3 x)
+    member __.SetException x = setResult (Choice2Of3 x)
+    member __.SetCanceled x = setResult (Choice3Of3 x)
+    member __.Async = async
+         
 
 type Microsoft.FSharp.Control.Async with
     static member RunWithRuntime(cont, ?cancellationToken:CancellationToken) =               
         let runtime = new Runtime()
         runtime.Run (cont, ?cancellationToken=cancellationToken)
 
-    static member Iterate (x:'T1) (cont:'T1->Async<Choice<'T1,'T2>>) =
-        async {
-            let mutable state = x            
+    static member Iterate (state:'T1) (f:'T1->Async<Choice<'T1,'T2>>) =
+        async {                                             
+            let mutable state = state            
             let mutable result = None
             
             while Option.isNone result do
-                let! x = cont state
+                let! x = f state
                 match x with
                 | Choice1Of2 x->
                     state <- x
@@ -94,7 +116,7 @@ type Microsoft.FSharp.Control.Async with
                     result <- Some x                    
             
             return Option.get result                    
-        }                                                
+        }        
     
     /// <summary>Creates an asynchronous computation that executes all the given asynchronous computations sequentially,
     /// starting immediately on the current operating system thread</summary>.            
@@ -128,7 +150,7 @@ type Microsoft.FSharp.Control.Async with
                 let! cancellationToken = Async.CancellationToken
                 use innerCTS = new CancellationTokenSource()
                 use linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, innerCTS.Token)
-                let source = TaskCompletionSource<'T option>()
+                let promise = new Promise<'T option>()
                                 
                 let mutable count = computations.Length
                 let complete res =
@@ -136,9 +158,9 @@ type Microsoft.FSharp.Control.Async with
                     
                     if decrement = computations.Length - 1 then
                         match res with
-                        | Choice1Of3 x -> source.SetResult x
-                        | Choice2Of3 (x:exn) -> source.SetException x
-                        | Choice3Of3 () -> source.SetCanceled ()
+                        | Choice1Of3 x -> promise.SetResult x
+                        | Choice2Of3 x -> promise.SetException x
+                        | Choice3Of3 x -> promise.SetCanceled x
                         innerCTS.Cancel()
                                                 
                     if decrement = 0 then
@@ -149,10 +171,10 @@ type Microsoft.FSharp.Control.Async with
                     Async.StartWithContinuations (cont,
                                                   (fun res -> complete (Choice1Of3 res)),
                                                   (fun exc -> complete (Choice2Of3 exc)),
-                                                  (fun _ -> complete (Choice3Of3 ())),
+                                                  (fun exc -> complete (Choice3Of3 exc)),
                                                   linkedCTS.Token)) computations
                 
-                return! Async.AwaitTask source.Task
+                return! promise.Async
         }
                     
     /// <summary>Creates an asynchronous computation that executes all the given asynchronous computations,
@@ -160,13 +182,13 @@ type Microsoft.FSharp.Control.Async with
     static member ParallelImmediate (computations: seq<Async<'T>>) : Async<'T []> =
         let startImmediate token task =
             Async.FromContinuations (fun (cont, ccont, econt) ->
-                let source = new TaskCompletionSource<'T>()                 
+                let promise = new Promise<'T>()                 
                 Async.StartWithContinuations (task,
-                                              source.SetResult,
-                                              source.SetException,
-                                              (fun exn -> source.SetCanceled()),
+                                              promise.SetResult,
+                                              promise.SetException,
+                                              promise.SetCanceled,
                                               token)
-                cont <| Async.AwaitTask source.Task  
+                cont promise.Async  
             )
             
         let folder a b =

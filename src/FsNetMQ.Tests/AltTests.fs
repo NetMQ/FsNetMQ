@@ -16,12 +16,11 @@ let tests =
             
             let handleClient = async {
                 let! _ = Frame.recvAsync client
-                return Choice2Of2 ()               
+                return Choice2Of2 () 
             }
             
             let handleServer = async {
                 let! _ = Frame.recvAsync server
-                printfn "Server"
                 Frame.send server "World"B
                 return Choice1Of2 ()
             }
@@ -34,7 +33,7 @@ let tests =
                     Socket.alt server ^=>. handleServer
                 ]
                 |> Alt.toAsync 
-                        
+                                    
             Async.Iterate () (fun _ -> cont)
             |> Async.RunWithRuntime                                               
     ]

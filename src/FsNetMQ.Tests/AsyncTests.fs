@@ -39,8 +39,5 @@ let tests =
                 let! _ = Frame.tryRecvAsync client 10<milliseconds>
                 ()
            }
-           |> Async.RunWithRuntime
-           
-        
-           
+           |> Async.RunWithRuntime                   
     ]

@@ -78,22 +78,28 @@ module Alt =
         
     let choose (alts: Alt<'x> list) : Alt<'x> =
         fun ctx ->
-            async {                
-                let computations = List.map (fun (Alt alt) -> alt ctx) alts 
-                                            
-                let source = TaskCompletionSource<'x>()                            
+            async {
+                let! token = Async.CancellationToken                                          
+                let promise = new Promise<'x>()
+                let computations = List.map (fun (Alt alt) -> alt ctx) alts
+                let mutable cancelledCounter = List.length computations                
                 let complete res =                
                     match res with
-                    | Choice1Of2 x -> source.SetResult x
-                    | Choice2Of2 (x:exn) -> source.SetException x                                                                           
+                    | Choice1Of3 x -> promise.SetResult x
+                    | Choice2Of3 (x:exn) -> promise.SetException x
+                    | Choice3Of3 (x:OperationCanceledException) ->
+                        if Interlocked.Decrement &cancelledCounter = 0 then
+                            promise.SetCanceled x
                         
                 List.iter (fun cont ->
                     Async.StartWithContinuations (cont,
-                                                  (fun res -> complete (Choice1Of2 res)),
-                                                  (fun exc -> complete (Choice2Of2 exc)),
-                                                  (fun _ -> ()))) computations
+                                                  (fun res -> complete (Choice1Of3 res)),
+                                                  (fun exc -> complete (Choice2Of3 exc)),
+                                                  (fun exc -> complete (Choice3Of3 exc)),
+                                                  token)) computations
                 
-                return! Async.AwaitTask source.Task
+                return! promise.Async
+                
             }
         |> Alt            
         
