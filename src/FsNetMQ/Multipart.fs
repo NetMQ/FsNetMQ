@@ -42,18 +42,7 @@ let recv socket =
         | true -> recv' parts'
         | false -> parts'
 
-    recv' Seq.empty
-    
-let recvAsync socket =
-    async {
-        let! first, more = Frame.recvAsync socket
-        
-        if more then
-            let parts = recv socket
-            return seq {yield first; yield! parts}
-        else
-            return Seq.singleton first               
-    }      
+    recv' Seq.empty     
     
 let tryRecv socket (timeout:int<milliseconds>) =
     match Frame.tryRecv socket timeout with 
@@ -64,16 +53,21 @@ let tryRecv socket (timeout:int<milliseconds>) =
 let tryRecvNow socket = tryRecv socket 0<milliseconds>        
 let trySendNow socket parts = trySend socket parts 0<milliseconds>
 
-let tryRecvAsync socket (timeout:int<milliseconds>) =
-    async {
-        match! Frame.tryRecvAsync socket timeout with
-        | Some (first, true) ->
-            let parts = recv socket
-            return Some <| seq {yield first; yield! parts}
-        | Some (first, false) ->
-            return Some <| Seq.singleton first
-        | None -> return None             
-    }
-
 let skip (socket:Socket) = socket.Socket.SkipMultipartMessage ()
 
+let recvAsync socket =
+    Frame.recvAsync socket ^-> fun (first, more) ->       
+        if more then
+            let parts = recv socket
+            seq {yield first; yield! parts}
+        else
+            Seq.singleton first               
+    
+let tryRecvAsync socket (timeout:int<milliseconds>) =
+    Frame.tryRecvAsync socket timeout ^-> function    
+        | Some (first, true) ->
+            let parts = recv socket
+            Some <| seq {yield first; yield! parts}
+        | Some (first, false) ->
+            Some <| Seq.singleton first
+        | None -> None                 

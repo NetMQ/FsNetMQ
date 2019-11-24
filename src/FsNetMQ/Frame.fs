@@ -27,30 +27,31 @@ let trySendMoreNow socket (bytes:byte[]) = trySendMore socket bytes 0<millisecon
 let trySendNow socket (bytes:byte[]) = trySend socket bytes 0<milliseconds>    
 let tryRecvNow socket = tryRecv socket 0<milliseconds>
 
-let recvAsync socket =
-    async {
-        match tryRecvNow socket with
-        | Some frame -> return frame
-        | None ->
-            match Runtime.Current with
-            | None ->
-                return 
-                    Async.NoRuntimeError "When using FsNetMQ async operation you must use Async.RunWithRuntime"
-                    |> raise
-            | Some runtime ->
-                runtime.Add socket
-                let! _ = Async.AwaitEvent socket.Socket.ReceiveReady                                               
-                let frame = recv socket
+let recvAsync socket : Alt<byte[]*bool> =
+    fun (ctx:AltContext) ->
+        async {
+            ctx.Acquire()
+            match tryRecvNow socket with
+            | Some frame ->
+                do! ctx.TakeRelease()
                 return frame
-    }                      
+            | None ->
+                ctx.Release()
+                match Runtime.Current with
+                | None ->
+                    return 
+                        Async.NoRuntimeError "When using FsNetMQ async operation you must use Alt.Run"
+                        |> raise
+                | Some runtime ->
+                    runtime.Add socket
+                    let! _ = Async.AwaitEvent socket.Socket.ReceiveReady
+                    do! ctx.Take()
+                    let frame = recv socket                    
+                    return frame
+        }                      
 
-let tryRecvAsync socket (timeout:int<milliseconds>) =
-    let timeout = async {        
-        do! Async.Sleep (int timeout)
-        return None
-    }
-    let result = async {        
-        let! frame = recvAsync socket
-        return Some frame
-    }
-    Async.ChoiceImmediate [timeout;result]    
+let tryRecvAsync socket (timeout:int<milliseconds>) =            
+    Alt.Choose [
+        Alt.Sleep (int timeout) ^->. None
+        recvAsync socket ^-> Some
+    ]    

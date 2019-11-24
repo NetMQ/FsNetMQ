@@ -22,17 +22,13 @@ let tryRecv socket (timeout:int<milliseconds>) =
 let tryRecvNow socket = tryRecv socket 0<milliseconds>
 
 let recvAsync socket =
-    async {
-        let! (response, more) = Frame.recvAsync socket
+    Frame.recvAsync socket ^-> fun (response, more) ->
         skip socket more
-        return response
-    }
+        response
     
 let tryRecvAsync socket (timeout:int<milliseconds>) =
-    async {
-        match! Frame.tryRecvAsync socket timeout with
+    Frame.tryRecvAsync socket timeout ^-> function
         | Some (response, more) ->
             skip socket more
-            return Some response
-        | None -> return None        
-    }
+            Some response
+        | None -> None        

@@ -14,27 +14,20 @@ let tests =
             use client = Socket.dealer ()
             Socket.connect client "tcp://127.0.0.1:5555"
             
-            let handleClient = async {
-                let! _ = Frame.recvAsync client
-                return Choice2Of2 () 
-            }
-            
-            let handleServer = async {
-                let! _ = Frame.recvAsync server
+            let handleClient = Frame.recvAsync client ^->. Choice2Of2 ()
+            let handleServer = Frame.recvAsync server ^-> fun _ ->
                 Frame.send server "World"B
-                return Choice1Of2 ()
-            }
+                Choice1Of2 ()            
             
             Frame.send client "Hello"B         
                                    
             let cont =
-                Alt.choose [
-                    Socket.alt client ^=>. handleClient
-                    Socket.alt server ^=>. handleServer
-                ]
-                |> Alt.toAsync 
+                Alt.Choose [
+                    handleClient
+                    handleServer
+                ]                 
                                     
-            Async.Iterate () (fun _ -> cont)
-            |> Async.RunWithRuntime                                               
+            Alt.Iterate () (fun _ -> cont)
+            |> Alt.Run           
     ]
 
