@@ -37,44 +37,50 @@ type AltContext() =
             )
     member this.Reset () = counter <- 0
             
-type Alt<'x> = AltContext -> Async<'x>
+type Alt<'x> = Alt of (AltContext -> Async<'x>)
        
-let (^=>) alt (f: 'x->Async<'y>) : Alt<'y> =
+let (^=>) (Alt alt) (f: 'x->Async<'y>) : Alt<'y> =
     fun (ctx:AltContext) ->
         async {
             let! x = alt ctx
             return! f (x)
         }
+    |> Alt.Alt
     
-let (^->) alt (f: 'x->'y) : Alt<'y> =
+let (^->) (Alt alt) (f: 'x->'y) : Alt<'y> =
     fun (ctx:AltContext) ->
         async {
             let! x = alt ctx
             return f (x)
         }
+    |> Alt.Alt
     
-let (^=>.) alt (y:Async<'y>) : Alt<'y> =
+let (^=>.) (Alt alt) (y:Async<'y>) : Alt<'y> =
     fun (ctx:AltContext) ->
         async {
             let! _ = alt ctx
             return! y
         }
+    |> Alt.Alt
+        
     
-let (^->.) alt (y: 'y) : Alt<'y> =
+let (^->.) (Alt alt) (y: 'y) : Alt<'y> =
     fun (ctx:AltContext) ->
         async {
             let! _ = alt ctx
             return y
-        }    
+        }
+    |> Alt.Alt
         
 [<RequireQualifiedAccess>]
-type Alt() =
+type Alt =
     static member FromEvent e =
         fun (ctx:AltContext) -> async {
             let! args = Async.AwaitEvent e
             do! ctx.Take ()
             return args
         }
+        |> Alt.Alt
         
     static member FromAsync comp =
         fun (ctx:AltContext) -> async {
@@ -82,26 +88,29 @@ type Alt() =
             do! ctx.Take ()
             return x
         }
+        |> Alt.Alt
 
-    static member Ignore alt =
+    static member Ignore (Alt alt) =
         fun (ctx:AltContext) -> async {
             let! _ = alt ctx
             return ()
-        }        
+        }
+        |> Alt.Alt
         
     static member Sleep millisecondsDueTime =
         fun (ctx:AltContext) -> async {
             do! Async.Sleep millisecondsDueTime
             do! ctx.Take ()
             return ()
-        }        
+        }
+        |> Alt.Alt
         
     static member Choose (alts: Alt<'x> list) : Alt<'x> =
         fun ctx ->
             async {
                 let! token = Async.CancellationToken                                          
                 let promise = new Promise<'x>()
-                let computations = List.map (fun alt -> alt ctx) alts
+                let computations = List.map (fun (Alt alt) -> alt ctx) alts
                 let mutable cancelledCounter = List.length computations                
                 let complete res =                
                     match res with
@@ -121,9 +130,10 @@ type Alt() =
                 return! promise.Async
                 
             }
+        |> Alt.Alt
                     
     static member Parallel (computations: seq<Alt<'T>>) : Alt<'T []> =
-        let startImmediate token alt =            
+        let startImmediate token (Alt alt) =            
             Async.FromContinuations (fun (cont, _, _) ->
                 let ctx = new AltContext()
                 let promise = new Promise<'T>()                 
@@ -153,9 +163,10 @@ type Alt() =
                    |> Seq.fold folder (async.Return([]))
                let! results = Seq.fold folder (async.Return([])) tasks
                return List.toArray results                            
-            }        
+            }
+        |> Alt.Alt
         
-    static member ToAsync alt =
+    static member ToAsync (Alt alt) =
         async {
             let ctx = new AltContext()
             return! alt ctx
@@ -175,21 +186,22 @@ type Alt() =
                         result <- Some x
                 
                 // The first run is with the provided alt-context, continueing with a new one for every loop 
-                let alt = f state 
+                let (Alt alt) = f state 
                 let! x = alt ctx
                 complete x
                 
                 let ctx' = new AltContext()                                                                                                                               
                 while Option.isNone result do
                     ctx'.Reset ()
-                    let alt = f state 
+                    let (Alt alt) = f state 
                     let! x = alt ctx'
                     complete x                    
                 
                 return Option.get result                    
             }
+        |> Alt.Alt
         
-    static member Run (alt, ?cancellationToken:CancellationToken) =
+    static member Run (Alt alt, ?cancellationToken:CancellationToken) =
         let ctx = new AltContext()                                                                                                                               
         let runtime = new Runtime()
         runtime.Run (alt ctx, ?cancellationToken=cancellationToken)

@@ -48,7 +48,8 @@ let recvAsync socket : Alt<byte[]*bool> =
                     do! ctx.Take()
                     let frame = recv socket                    
                     return frame
-        }                      
+        }
+    |> Alt.Alt
 
 let tryRecvAsync socket (timeout:int<milliseconds>) =            
     Alt.Choose [
