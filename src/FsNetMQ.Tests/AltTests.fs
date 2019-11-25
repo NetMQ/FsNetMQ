@@ -28,6 +28,21 @@ let tests =
                 ]                 
                                     
             Alt.Iterate () (fun _ -> cont)
-            |> Alt.Run           
+            |> Alt.Run
+            
+        testCase "awaiting Alt expression" <| fun () ->
+            use server = Socket.dealer ()
+            Socket.bind server "tcp://*:5556"
+            
+            use client = Socket.dealer ()
+            Socket.connect client "tcp://127.0.0.1:5556"
+            
+            let comp = async {
+                Frame.send client "Hello"B
+                let! _ = Frame.recvAsync server
+                return ()
+            }
+            
+            Alt.Run comp
     ]
 

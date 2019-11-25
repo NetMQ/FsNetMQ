@@ -1,6 +1,7 @@
 [<RequireQualifiedAccess>]
 module FsNetMQ.Frame
 
+open FsNetMQ
 open System
 open NetMQ
 
@@ -28,7 +29,7 @@ let trySendNow socket (bytes:byte[]) = trySend socket bytes 0<milliseconds>
 let tryRecvNow socket = tryRecv socket 0<milliseconds>
 
 let recvAsync socket : Alt<byte[]*bool> =
-    fun (ctx:AltContext) ->
+    let alt = fun (ctx:AltContext) ->
         async {
             ctx.Acquire()
             match tryRecvNow socket with
@@ -49,7 +50,25 @@ let recvAsync socket : Alt<byte[]*bool> =
                     let frame = recv socket                    
                     return frame
         }
-    |> Alt.Alt
+    
+    let comp = async {        
+        match tryRecvNow socket with
+        | Some frame ->            
+            return frame
+        | None ->            
+            match Runtime.Current with
+            | None ->
+                return 
+                    Async.NoRuntimeError "When using FsNetMQ async operation you must use Alt.Run"
+                    |> raise
+            | Some runtime ->
+                runtime.Add socket
+                let! _ = Async.AwaitEvent socket.Socket.ReceiveReady                
+                let frame = recv socket                    
+                return frame
+    }
+    
+    Alt.makeAlt alt comp
 
 let tryRecvAsync socket (timeout:int<milliseconds>) =            
     Alt.Choose [

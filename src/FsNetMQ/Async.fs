@@ -98,4 +98,8 @@ type Promise<'T>() =
     member __.SetResult x = setResult (Choice1Of3 x)
     member __.SetException x = setResult (Choice2Of3 x)
     member __.SetCanceled x = setResult (Choice3Of3 x)
-    member __.Async = async                              
+    member __.Async = async
+    
+
+
+                                      
