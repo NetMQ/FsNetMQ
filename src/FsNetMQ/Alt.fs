@@ -43,76 +43,48 @@ let internal makeAlt (alt:AltContext->Async<'x>) (comp:Async<'x>) = Alt (alt,com
          
 type Microsoft.FSharp.Control.AsyncBuilder with
     member inline this.Bind(Alt (_,comp): Alt<'T>, binder: ('T -> Async<'U>)) : Async<'U> =
-        this.Bind(comp, binder)
-        
-    member inline this.ReturnFrom (Alt (_,comp):Alt<'T>) : Async<'T> = comp     
-     
-type Combinator =
-        | Combinator with
-
-        static member (^=>) (Combinator, f:'x->Async<'y>) =
-            fun (Alt (alt, comp)) ->
-                let alt = (fun (ctx:AltContext) ->
-                    async {
-                        let! x = alt ctx
-                        return! f (x)
-                    })
-                
-                let comp = async {
-                    let! x = comp
-                    return! f (x)
-                }
-                
-                makeAlt alt comp
-                
-        static member (^=>) (Combinator, f:'x->Alt<'y>) =
-            fun (Alt (alt, comp)) ->
-                let alt = (fun (ctx:AltContext) ->
-                    async {
-                        let! x = alt ctx
-                        return! f (x)
-                    })
-                
-                let comp = async {
-                    let! x = comp
-                    return! f (x)
-                }
-                
-                makeAlt alt comp
-                
-        static member (^=>.) (Combinator, y:Async<'y>) =
-            fun (Alt (alt, comp)) ->
-                let alt = fun (ctx:AltContext) ->
-                    async {
-                        let! _ = alt ctx
-                        return! y
-                    }
-                    
-                let comp = async {
-                    let! _ = comp
-                    return! y
-                }
-                
-                makeAlt alt comp
-                
-        static member (^=>.) (Combinator, y:Alt<'y>) =
-            fun (Alt (alt, comp)) ->
-                let alt = fun (ctx:AltContext) ->
-                    async {
-                        let! _ = alt ctx
-                        return! y
-                    }
-                    
-                let comp = async {
-                    let! _ = comp
-                    return! y
-                }
-                
-                makeAlt alt comp                
+        this.Bind(comp, binder)        
+                           
+    member inline this.ReturnFrom (Alt (_,comp):Alt<'T>) : Async<'T> = comp                      
          
-let inline (^=>) alt f = (Combinator ^=> f) alt
+         
+let (^=>) (Alt (alt, comp):Alt<'x>) (f:'x->Async<'y>) =
+    let alt = fun (ctx:AltContext) ->
+        async.Bind (alt ctx, f)
+    
+    let comp = async.Bind (comp, f)
+    
+    Alt (alt, comp)
 
-let inline (^=>.) alt y = (Combinator ^=>. y) alt
+let (^=>.) (Alt (alt, comp)) (y:Async<'y>) =
+    let alt = fun (ctx:AltContext) ->
+        async.Bind (alt ctx, fun _ -> y)
+    
+    let comp = async.Bind (comp, fun _ -> y)
+    
+    Alt (alt, comp)
+    
+let (^==>) (Alt (alt, comp):Alt<'x>) (f:'x->Alt<'y>) =
+    let alt = fun (ctx:AltContext) ->
+        async.Bind (alt ctx, fun x ->
+            let (Alt (_,comp)) = f x
+            comp
+            )
+    
+    let comp = async.Bind (comp, fun x ->
+        let (Alt (_,comp)) = f x
+        comp
+        )
+    
+    Alt (alt, comp)
+
+let (^==>.) (Alt (alt, comp)) (Alt(_,y):Alt<'y>) =
+    let alt = fun (ctx:AltContext) ->
+        async.Bind (alt ctx, fun _ -> y)
+    
+    let comp = async.Bind (comp, fun _ -> y)
+    
+    Alt (alt, comp)
                     
 let (^->) (Alt (alt, comp)) (f: 'x->'y) : Alt<'y> =
     let alt = fun (ctx:AltContext) ->

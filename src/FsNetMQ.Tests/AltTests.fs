@@ -12,12 +12,13 @@ let tests =
             Socket.bind server "tcp://*:5555"
             
             use client = Socket.dealer ()
-            Socket.connect client "tcp://127.0.0.1:5555"
+            Socket.connect client "tcp://127.0.0.1:5555"                        
             
             let handleClient = Frame.recvAsync client ^->. Choice2Of2 ()
-            let handleServer = Frame.recvAsync server ^-> fun _ ->
+            let handleServer = Frame.recvAsync server ^=> fun _ -> async {
                 Frame.send server "World"B
-                Choice1Of2 ()            
+                return Choice1Of2 ()
+            }
             
             Frame.send client "Hello"B         
                                    
