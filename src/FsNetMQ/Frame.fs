@@ -30,22 +30,22 @@ let tryRecvNow socket = tryRecv socket 0<milliseconds>
 
 let recvAsync socket : Alt<byte[]*bool> =
     let alt = fun (ctx:AltContext) ->
-        async {
-            ctx.Acquire()
+        async {            
+            do! ctx.Acquire()            
             match tryRecvNow socket with
-            | Some frame ->
+            | Some frame ->                
                 do! ctx.TakeRelease()
                 return frame
-            | None ->
-                ctx.Release()
+            | None ->               
+                do! ctx.Release()
                 match Runtime.Current with
                 | None ->
                     return 
                         Async.NoRuntimeError "When using FsNetMQ async operation you must use Alt.Run"
                         |> raise
                 | Some runtime ->
-                    runtime.Add socket
-                    let! _ = Async.AwaitEvent socket.Socket.ReceiveReady
+                    runtime.Add socket                    
+                    let! _ = Async.AwaitEvent socket.Socket.ReceiveReady                    
                     do! ctx.Take()
                     let frame = recv socket                    
                     return frame

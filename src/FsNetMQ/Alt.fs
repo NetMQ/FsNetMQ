@@ -8,34 +8,40 @@ open System.Threading
 type AltContext() =
     let mutable counter = 0    
     
-    member this.Acquire () = Monitor.Enter (this)
-    member this.Release () = Monitor.Exit (this)
-    
-    member this.TakeRelease() =
-        Async.FromContinuations (fun (cont, _, ccont) ->                        
-            let first = counter = 0
-            counter <- counter + 1
-            this.Release()
-            
-            if first then
+    member this.Acquire () =
+        Async.FromContinuations (fun (cont, _, ccont) ->                                         
+            Monitor.Enter(this)            
+            if counter = 0 then                   
                 cont ()
             else
+                Monitor.Exit(this)
                 ccont <| new OperationCanceledException("operation cancelled")
+        )
+        
+    member this.Release () = async {       
+        Monitor.Exit(this)
+    }
+    
+    member this.TakeRelease() =
+        Async.FromContinuations (fun (cont, _, _) ->
+            counter <- counter + 1
+            Monitor.Exit(this)
+            
+            cont ()
         )
         
     member this.Take () =                
         Async.FromContinuations (fun (cont, _, ccont) ->            
-            this.Acquire()
+            Monitor.Enter(this)
             let first = counter = 0
             counter <- counter + 1
-            this.Release()
+            Monitor.Exit(this)
             
             if first then
                 cont ()
             else
                 ccont <| new OperationCanceledException("operation cancelled")
-            )
-    member this.Reset () = counter <- 0
+        )    
             
 type Alt<'x> = Alt of (AltContext -> Async<'x>)*Async<'x> 
     
@@ -64,7 +70,7 @@ let (^=>.) (Alt (alt, comp)) (y:Async<'y>) =
     
     Alt (alt, comp)
     
-let (^==>) (Alt (alt, comp):Alt<'x>) (f:'x->Alt<'y>) =
+let (^~>) (Alt (alt, comp):Alt<'x>) (f:'x->Alt<'y>) =
     let alt = fun (ctx:AltContext) ->
         async.Bind (alt ctx, fun x ->
             let (Alt (_,comp)) = f x
@@ -78,7 +84,7 @@ let (^==>) (Alt (alt, comp):Alt<'x>) (f:'x->Alt<'y>) =
     
     Alt (alt, comp)
 
-let (^==>.) (Alt (alt, comp)) (Alt(_,y):Alt<'y>) =
+let (^~>.) (Alt (alt, comp)) (Alt(_,y):Alt<'y>) =
     let alt = fun (ctx:AltContext) ->
         async.Bind (alt ctx, fun _ -> y)
     
@@ -252,10 +258,9 @@ type Alt =
                 let (Alt (alt,_)) = f state 
                 let! x = alt ctx
                 complete x
-                
-                let ctx' = new AltContext()                                                                                                                               
+                                                                                                                                                               
                 while Option.isNone result do
-                    ctx'.Reset ()
+                    let ctx' = new AltContext()
                     let (Alt (alt,_)) = f state 
                     let! x = alt ctx'
                     complete x                    
