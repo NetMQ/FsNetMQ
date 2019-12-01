@@ -1,6 +1,7 @@
 [<AutoOpen>]
 module FsNetMQ.Async
 
+open System.Runtime.ExceptionServices
 open System.Threading
 open System.Threading.Tasks
 open NetMQ
@@ -38,8 +39,8 @@ type internal Runtime() =
                                         
         Async.StartWithContinuations (cont,
                                       (fun res -> setResult <| Choice1Of3 res),
-                                      (fun exc -> setResult <| Choice2Of3 exc),
-                                      (fun exc -> setResult <| Choice3Of3 exc),
+                                      (fun exc -> setResult <| Choice2Of3 (ExceptionDispatchInfo.Capture exc)),
+                                      (fun exc -> setResult <| Choice3Of3 (ExceptionDispatchInfo.Capture exc)),
                                       ?cancellationToken=cancellationToken)
         
         if Option.isNone result then                                            
@@ -61,8 +62,12 @@ type internal Runtime() =
                               
         match result with
         | Some (Choice1Of3 result) -> result
-        | Some (Choice2Of3 exc) -> raise exc
-        | Some (Choice3Of3 exc) -> raise exc
+        | Some (Choice2Of3 edi) ->
+            edi.Throw()
+            failwith "unreachable"
+        | Some (Choice3Of3 edi) ->
+            edi.Throw()
+            failwith "unreachable"
         | None -> failwith "Result is missing"
                                                    
     override this.Post(d, state) =
