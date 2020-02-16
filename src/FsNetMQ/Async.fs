@@ -144,7 +144,19 @@ type FSharp.Control.Async with
                |> Seq.map (startInContext token)
                |> Seq.fold folder (async.Return([]))
            return List.toArray results                            
-        } 
+        }
+        
+    static member StartChildInContext(child:Async<'T>) : Async<Async<'T>> = async {                   
+        let! token = Async.CancellationToken
+        let promise = new Promise<'T>()
+        
+        Async.StartWithContinuations (child,
+                                      promise.SetResult,
+                                      promise.SetException,
+                                      promise.SetCanceled,                                              
+                                      token)
+        return promise.Async
+    }
     
     static member ChooseInContext(computations : Async<'T> seq) : Async<'T> = async {
         let computations = Seq.toArray computations
