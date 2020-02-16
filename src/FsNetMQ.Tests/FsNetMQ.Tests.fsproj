@@ -26,7 +26,6 @@
     <ProjectReference Include="..\FsNetMQ\FsNetMQ.fsproj" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AltTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   

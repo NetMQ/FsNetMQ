@@ -56,7 +56,7 @@ let trySendNow socket parts = trySend socket parts 0<milliseconds>
 let skip (socket:Socket) = socket.Socket.SkipMultipartMessage ()
 
 let recvAsync socket =
-    Frame.recvAsync socket ^-> fun (first, more) ->       
+    Frame.recvAsync socket ^=> fun (first, more) ->       
         if more then
             let parts = recv socket
             seq {yield first; yield! parts}
@@ -64,7 +64,7 @@ let recvAsync socket =
             Seq.singleton first               
     
 let tryRecvAsync socket (timeout:int<milliseconds>) =
-    Frame.tryRecvAsync socket timeout ^-> function    
+    Frame.tryRecvAsync socket timeout ^=> function    
         | Some (first, true) ->
             let parts = recv socket
             Some <| seq {yield first; yield! parts}

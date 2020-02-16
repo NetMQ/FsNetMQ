@@ -23,7 +23,7 @@
   <ItemGroup>
     <Compile Include="Types.fs" />
     <Compile Include="Async.fs" />
-    <Compile Include="Alt.fs" />
+<!--    <Compile Include="Alt.fs" />-->
     <Compile Include="Socket.fs" />
     <Compile Include="Frame.fs" />
     <Compile Include="SingleFrame.fs" />

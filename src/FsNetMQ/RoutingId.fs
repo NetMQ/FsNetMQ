@@ -44,10 +44,10 @@ let trySet (socket:Socket) (RoutingId routingId) (timeout:int<milliseconds>) =
         | :? HostUnreachableException -> TryResult.HostUnreachable        
         
 let getAsync socket =
-    Frame.recvAsync socket ^-> (fst >> RoutingId)
+    Frame.recvAsync socket ^=> (fst >> RoutingId)
     
 let tryGetAsync socket (timeout:int<milliseconds>) =
-    Frame.tryRecvAsync socket timeout ^-> function    
+    Frame.tryRecvAsync socket timeout ^=> function    
         | Some (bytes, _) -> Some <| RoutingId bytes
         | None -> None
               
