@@ -21,3 +21,23 @@ let setLinger (socket:Socket) (value:int<milliseconds>) =
 
 let setHelloMessage (socket:Socket) (value:byte[]) =
     socket.Socket.Options.HelloMessage <- value
+
+let heartbeatInterval (socket:Socket) = 
+    (int socket.Socket.Options.HeartbeatInterval.TotalMilliseconds) * 1<milliseconds>
+    
+let setHeartbeatInterval (socket:Socket) (value:int<milliseconds>) = 
+    socket.Socket.Options.HeartbeatInterval <- TimeSpan.FromMilliseconds (float value)    
+
+let heartbeatTtl (socket:Socket) = 
+    (int socket.Socket.Options.HeartbeatTtl.TotalMilliseconds) * 1<milliseconds>
+    
+let setHeartbeatTtl (socket:Socket) (value:int<milliseconds>) = 
+    socket.Socket.Options.HeartbeatTtl <- TimeSpan.FromMilliseconds (float value)    
+
+let heartbeatTimeout (socket:Socket) = 
+    (int socket.Socket.Options.HeartbeatTimeout.TotalMilliseconds) * 1<milliseconds>
+    
+let setHeartbeatTimeout (socket:Socket) (value:int<milliseconds>) = 
+    socket.Socket.Options.HeartbeatTimeout <- TimeSpan.FromMilliseconds (float value)    
+
+
