@@ -18,3 +18,6 @@ let linger (socket:Socket) =
     
 let setLinger (socket:Socket) (value:int<milliseconds>) = 
     socket.Socket.Options.Linger <- TimeSpan.FromMilliseconds (float value)    
+
+let setHelloMessage (socket:Socket) (value:byte[]) =
+    socket.Socket.Options.HelloMessage <- value
