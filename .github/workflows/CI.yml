@@ -1,0 +1,26 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  ununtu:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: dotnet restore src
+    - name: build 
+      run: dotnet build src /p:Configuration=Release /verbosity:minimal
+    - name: test
+      run: dotnet test src/FsNetMQ.Tests/ -f netcoreapp3.0 -- --fail-on-focused-tests --summary
+  windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: dotnet restore src
+    - name: build 
+      run: dotnet build src /p:Configuration=Release /verbosity:minimal
+    - name: test netcoreapp3.0
+      run: dotnet test src/FsNetMQ.Tests -f netcoreapp3.0 -- --fail-on-focused-tests --summary
+    - name: test net461
+      run: dotnet test src/FsNetMQ.Tests -f net461 -- --fail-on-focused-tests --summary
+       
+
